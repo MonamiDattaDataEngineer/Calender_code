@@ -1,0 +1,71 @@
+def generate_series(start, stop, interval):
+
+    '''
+
+    :param start  - lower bound, inclusive
+
+    :param stop   - upper bound, exclusive
+
+    :interval int - increment interval in seconds
+
+    '''
+
+    # Determine start and stops in epoch seconds
+
+    start, stop = spark.createDataFrame(
+
+        [(start, stop)], ('start', 'stop')
+
+    ).select(
+
+        [col(c).cast('timestamp').cast('long') for c in ('start', 'stop')
+
+    ]).first()
+
+    # Create range with increments and cast to timestamp
+
+    return spark.range(start, stop, interval).select(
+
+        col('id').cast('timestamp').cast(DateType()).alias('generated_Date')
+
+    )
+
+
+from datetime import datetime
+from datetime import timedelta
+from dateutil.relativedelta import relativedelta
+import pytz
+from pyspark.sql.types import *
+datetime_IN = datetime.now(pytz.timezone('Asia/Kolkata'))
+
+date_3_years_ago = datetime_IN - relativedelta(years=3)
+
+date_3_years_ago_FY = str(datetime(date_3_years_ago.year, 4, 1).strftime("%Y-%m-%d"))
+
+td = str(datetime_IN.strftime("%Y-%m-%d"))
+
+
+dateDF = generate_series(date_3_years_ago_FY, td, 60 * 60 * 24)
+dateDF.show()
+
+
+from datetime import datetime
+dateDF = generate_series(date_3_years_ago_FY, td, 60 * 60 * 24)
+
+
+#Creating the list of dates----
+DateDFList = dateDF.select("generated_Date").rdd.flatMap(lambda x: x).collect()
+
+
+#Taking only 21st date of every month in a list----
+filtered_date_List = [x for x in dateDFList if x.day ==21]
+#print(filtered_date_List)
+
+
+
+##tking mmmyyyy in the dataframe
+
+from pyspark.sql.functions import date_format
+dateDF = dateDF.select(date_format(dateDF["generated_Date"],"MMMyyyy").alias("date_month"))
+dateDF.show() 
+
